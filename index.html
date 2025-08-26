@@ -16,7 +16,6 @@ body {
     color: #000000;
     text-align: center;
     padding: 20px;
-    position: relative;
     min-height: 100vh;
 }
 
@@ -27,11 +26,19 @@ h1 {
 }
 
 h2 {
-    color: #ffffff; /* rojo más intenso para subtítulos */
+    color: #ffffff; 
 }
 
 #menu {
     margin-bottom: 20px;
+}
+
+input {
+    padding:12px 25px;
+    margin-right:10px;
+    border:none;
+    border-radius:10px;
+    font-size:16px;
 }
 
 button {
@@ -105,34 +112,54 @@ td.tachado {
     font-size:18px;
 }
 
-#ranking {
-    position:fixed;
-    right:10px;
-    top:50px;
-    width:220px;
-    text-align:left;
-    background:#f9f9f9;
-    padding:10px;
-    border:1px solid #ccc;
-    border-radius:5px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-
-#ranking h3 {
-    margin-top:0;
-    font-size:16px;
-}
-
 #mi-usuario {
-    position:fixed;
-    left:10px;
-    top:10px;
     font-size:14px;
     background:#f0f0f0;
     padding:5px 10px;
     border-radius:5px;
     border:1px solid #ccc;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    margin-bottom:10px;
+}
+
+/* Botón del ranking */
+#btn-ranking {
+    position:fixed;
+    top:10px;
+    right:10px;
+    z-index:1000;
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    background:#e57373;
+    color:white;
+    font-weight:600;
+    cursor:pointer;
+    transition:0.2s;
+}
+#btn-ranking:hover {
+    background:#d32f2f;
+}
+
+/* Panel desplegable */
+#panel-ranking {
+    display:none;
+    position:fixed;
+    top:50px;
+    right:10px;
+    width:220px;
+    max-height:400px;
+    overflow-y:auto;
+    background:#f9f9f9;
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:5px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+    z-index:999;
+}
+#panel-ranking h3 {
+    margin-top:0;
+    font-size:16px;
 }
 </style>
 </head>
@@ -152,14 +179,18 @@ td.tachado {
 
 <div id="mi-usuario" style="display:none;"></div>
 
-<div id="bingo-container"></div>
-
-<div id="tableros-amigos">
-    <h2>Tableros en vivo</h2>
-    <div id="live-tableros"></div>
+<!-- Contenedor principal -->
+<div id="contenido-principal">
+    <div id="bingo-container"></div>
+    <div id="tableros-amigos">
+        <h2>Tableros en vivo</h2>
+        <div id="live-tableros"></div>
+    </div>
 </div>
 
-<div id="ranking">
+<!-- Botón y panel de ranking -->
+<button id="btn-ranking" onclick="toggleRanking()">📊 Puestos</button>
+<div id="panel-ranking">
     <h3>📊 Puestos</h3>
     <ol id="lista-ganadores"></ol>
 </div>
@@ -264,11 +295,8 @@ function contarLineas(tablero){
         }
     }
     let lineas=0;
-    // Filas
     for(let i=0;i<5;i++) if(matriz[i].every(v=>v)) lineas++;
-    // Columnas
     for(let j=0;j<5;j++) if([0,1,2,3,4].every(i=>matriz[i][j])) lineas++;
-    // Diagonales
     if([0,1,2,3,4].every(i=>matriz[i][i])) lineas++;
     if([0,1,2,3,4].every(i=>matriz[i][4-i])) lineas++;
     return lineas;
@@ -283,7 +311,6 @@ function actualizarRanking(){
             const lineas = contarLineas(data[key]);
             rankingArray.push({nombre:key, lineas:lineas});
         }
-        // Orden descendente por lineas
         rankingArray.sort((a,b)=>b.lineas - a.lineas);
         const lista = document.getElementById("lista-ganadores");
         lista.innerHTML="";
@@ -296,7 +323,6 @@ function actualizarRanking(){
 }
 
 function actualizarLineas(user, tablero){
-    // Guardar líneas en firebase opcionalmente si quieres
     actualizarRanking();
 }
 
@@ -323,8 +349,9 @@ function verTablerosAmigos(){
     const liveContainer = document.getElementById("live-tableros");
     liveContainer.innerHTML="";
 
-    db.ref('tableros').once('value').then(snapshot=>{
+    db.ref('tableros').on('value', snapshot=>{
         const data = snapshot.val() || {};
+        liveContainer.innerHTML = "";
         for(const key in data){
             const div = document.createElement("div");
             div.className = "tablero-amigo";
@@ -337,17 +364,18 @@ function verTablerosAmigos(){
             div.appendChild(tablaContainer);
             liveContainer.appendChild(div);
 
-            db.ref('tableros/'+key).on('value', snap=>{
-                const tableroData = snap.val();
-                if(tableroData){
-                    crearTabla(tablaContainer, tableroData, false);
-                }
-            });
+            crearTabla(tablaContainer, data[key], false);
         }
     });
 }
 
-// Actualizar ranking cada segundo para reflejar cambios en vivo
+// Función para desplegar/ocultar ranking
+function toggleRanking(){
+    const panel = document.getElementById("panel-ranking");
+    panel.style.display = (panel.style.display === "none") ? "block" : "none";
+}
+
+// Actualizar ranking cada segundo
 setInterval(actualizarRanking, 1000);
 
 </script>
